@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import GameBoard from './components/GameBoard';
 import AdminDashboard from './components/AdminDashboard';
+import { initializeSampleCards } from './config/firebase';
 import './App.css';
 
 const App: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    // Initialize sample cards when the app starts
+    initializeSampleCards();
+  }, []);
 
   return (
     <div className="App">
@@ -28,7 +34,9 @@ const App: React.FC = () => {
         </div>
       </nav>
 
-      {isAdmin ? <AdminDashboard /> : <GameBoard />}
+      <main className="container mx-auto px-4 py-8">
+        {isAdmin ? <AdminDashboard /> : <GameBoard />}
+      </main>
     </div>
   );
 };

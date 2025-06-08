@@ -6,10 +6,10 @@ module.exports = {
   ],
   theme: {
     extend: {
-      colors: {
-        'card-red': '#ff4d4d',
-        'card-yellow': '#ffcc00',
-        'card-green': '#4CAF50',
+      backgroundColor: {
+        'card-red': '#FEE2E2',
+        'card-yellow': '#FEF3C7',
+        'card-green': '#D1FAE5'
       },
       animation: {
         'flip': 'flip 0.6s ease-in-out',
