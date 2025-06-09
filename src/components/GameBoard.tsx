@@ -33,7 +33,7 @@ const GameBoard: React.FC = () => {
           isAnswered: false
         })) as Card[];
         
-        // Sort cards by difficulty (red -> yellow -> green)
+        // Sort cards by difficulty
         const sortedCards = fetchedCards.sort((a, b) => {
           const order = { red: 0, yellow: 1, green: 2 };
           return order[a.color] - order[b.color];
@@ -128,9 +128,9 @@ const GameBoard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-          <span className="block sm:inline">{error}</span>
+      <div className="container-card">
+        <div className="error-message">
+          {error}
         </div>
       </div>
     );
@@ -138,109 +138,105 @@ const GameBoard: React.FC = () => {
 
   if (!currentCard) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="container-card">
+        <div className="flex justify-center items-center min-h-[60vh]">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen py-6 flex flex-col justify-center sm:py-12">
-      <div className="relative py-3 sm:max-w-xl sm:mx-auto">
-        <div className="relative px-4 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-20">
-          <div className="max-w-md mx-auto">
-            <div className="divide-y divide-gray-200">
-              {/* Progress Counter */}
-              <div className="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
-                <div className="flex justify-between items-center">
-                  <span>Rojas:</span>
-                  <div className="flex space-x-1">
-                    {[...Array(3)].map((_, i) => (
-                      <div
-                        key={i}
-                        className={`w-4 h-4 rounded-full ${
-                          i < gameState.redCards ? 'bg-red-500' : 'bg-gray-200'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>Amarillas:</span>
-                  <div className="flex space-x-1">
-                    {[...Array(2)].map((_, i) => (
-                      <div
-                        key={i}
-                        className={`w-4 h-4 rounded-full ${
-                          i < gameState.yellowCards ? 'bg-yellow-500' : 'bg-gray-200'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>Verdes:</span>
-                  <div className="flex space-x-1">
-                    {[...Array(1)].map((_, i) => (
-                      <div
-                        key={i}
-                        className={`w-4 h-4 rounded-full ${
-                          i < gameState.greenCards ? 'bg-green-500' : 'bg-gray-200'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
+    <div className="container-card">
+      <div className="game-container">
+        {/* Progress Tracker */}
+        <div className="progress-container">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="progress-label">Rojas</span>
+              <div className="progress-dots">
+                {[...Array(3)].map((_, i) => (
+                  <div
+                    key={`red-${i}`}
+                    className={`progress-dot ${
+                      i < gameState.redCards ? 'progress-dot-red' : 'progress-dot-empty'
+                    }`}
+                  />
+                ))}
               </div>
-
-              {/* Card Display */}
-              <div className="py-8">
-                <ReactCardFlip isFlipped={currentCard.isFlipped}>
-                  <div className={`card-front card-${currentCard.color}`}>
-                    <h2 className="text-xl font-bold mb-4">{currentCard.question}</h2>
-                    <input
-                      type="text"
-                      value={currentAnswer}
-                      onChange={(e) => setCurrentAnswer(e.target.value)}
-                      className="input-field"
-                      placeholder="Tu respuesta..."
-                      onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
-                    />
-                    {showHint && (
-                      <p className="text-sm mt-2 text-gray-600">
-                        Pista: {getHint(currentCard.answer)}
-                      </p>
-                    )}
-                    <div className="flex justify-between mt-4">
-                      <button
-                        onClick={() => setShowHint(true)}
-                        className="game-button-primary"
-                        disabled={showHint}
-                      >
-                        Ver Pista
-                      </button>
-                      <button
-                        onClick={handleSubmit}
-                        className="game-button-success"
-                      >
-                        Comprobar
-                      </button>
-                    </div>
-                  </div>
-                  <div className={`card-back card-${currentCard.color}`}>
-                    <h2 className="text-xl font-bold mb-4">Respuesta:</h2>
-                    <p className="mb-4">{currentCard.answer}</p>
-                    <button
-                      onClick={handleNextCard}
-                      className="game-button-primary w-full"
-                    >
-                      Siguiente Pregunta
-                    </button>
-                  </div>
-                </ReactCardFlip>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="progress-label">Amarillas</span>
+              <div className="progress-dots">
+                {[...Array(2)].map((_, i) => (
+                  <div
+                    key={`yellow-${i}`}
+                    className={`progress-dot ${
+                      i < gameState.yellowCards ? 'progress-dot-yellow' : 'progress-dot-empty'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="progress-label">Verdes</span>
+              <div className="progress-dots">
+                <div
+                  className={`progress-dot ${
+                    gameState.greenCards > 0 ? 'progress-dot-green' : 'progress-dot-empty'
+                  }`}
+                />
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Card Display */}
+        <div className="mt-8">
+          <ReactCardFlip isFlipped={currentCard.isFlipped}>
+            <div className={`card card-${currentCard.color}`}>
+              <h2 className="card-question">{currentCard.question}</h2>
+              <input
+                type="text"
+                value={currentAnswer}
+                onChange={(e) => setCurrentAnswer(e.target.value)}
+                className="input-field"
+                placeholder="Tu respuesta..."
+                onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
+              />
+              {showHint && (
+                <p className="hint-text">
+                  Pista: {getHint(currentCard.answer)}
+                </p>
+              )}
+              <div className="button-container">
+                <button
+                  onClick={() => setShowHint(true)}
+                  className="button-primary"
+                  disabled={showHint}
+                >
+                  Ver Pista
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  className="button-success"
+                >
+                  Comprobar
+                </button>
+              </div>
+            </div>
+
+            <div className={`card card-${currentCard.color}`}>
+              <h2 className="card-question">Respuesta:</h2>
+              <p className="card-answer">{currentCard.answer}</p>
+              <button
+                onClick={handleNextCard}
+                className="button-primary w-full"
+              >
+                Siguiente Pregunta
+              </button>
+            </div>
+          </ReactCardFlip>
         </div>
       </div>
 
@@ -249,17 +245,19 @@ const GameBoard: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, scale: 0.5 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4"
         >
-          <div className="bg-white p-8 rounded-lg max-w-md w-full mx-4">
+          <div className="bg-white rounded-xl shadow-xl p-8 max-w-md w-full mx-4">
             <h2 className="text-2xl font-bold mb-4">¡Felicitaciones!</h2>
-            <p className="mb-4">Has completado el juego. ¡Eres un campeón de la igualdad!</p>
+            <p className="mb-6 text-gray-600">
+              Has completado el juego. ¡Eres un campeón de la igualdad!
+            </p>
             <input
               type="text"
               placeholder="Tu nombre"
-              className="input-field mb-4"
+              className="input-field"
             />
-            <button className="game-button-success w-full">
+            <button className="button-success w-full">
               Guardar Puntuación
             </button>
           </div>

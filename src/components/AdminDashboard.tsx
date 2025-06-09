@@ -42,12 +42,12 @@ const AdminDashboard: React.FC = () => {
         answer: '',
         color: 'red'
       });
-      setSuccess('Card added successfully!');
+      setSuccess('¡Tarjeta agregada exitosamente!');
       setTimeout(() => setSuccess(null), 3000);
       fetchCards();
     } catch (error) {
       console.error('Error adding card:', error);
-      setError('Error adding card. Please try again.');
+      setError('Error al agregar la tarjeta. Por favor, intenta de nuevo.');
       setTimeout(() => setError(null), 3000);
     }
   };
@@ -55,27 +55,27 @@ const AdminDashboard: React.FC = () => {
   const handleDelete = async (cardId: string) => {
     try {
       await deleteDoc(doc(db, 'cards', cardId));
-      setSuccess('Card deleted successfully!');
+      setSuccess('¡Tarjeta eliminada exitosamente!');
       setTimeout(() => setSuccess(null), 3000);
       fetchCards();
     } catch (error) {
       console.error('Error deleting card:', error);
-      setError('Error deleting card. Please try again.');
+      setError('Error al eliminar la tarjeta. Por favor, intenta de nuevo.');
       setTimeout(() => setError(null), 3000);
     }
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+    <div className="admin-container">
+      <h1>Panel de Administración</h1>
       
       {/* Add New Card Form */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-4">Add New Card</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Question
+      <div className="admin-card">
+        <h2>Agregar Nueva Tarjeta</h2>
+        <form onSubmit={handleSubmit} className="admin-form">
+          <div className="form-group">
+            <label className="form-label">
+              Pregunta
             </label>
             <input
               type="text"
@@ -85,9 +85,9 @@ const AdminDashboard: React.FC = () => {
               required
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Answer
+          <div className="form-group">
+            <label className="form-label">
+              Respuesta
             </label>
             <input
               type="text"
@@ -97,8 +97,8 @@ const AdminDashboard: React.FC = () => {
               required
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="form-group">
+            <label className="form-label">
               Color
             </label>
             <select
@@ -107,50 +107,51 @@ const AdminDashboard: React.FC = () => {
               className="input-field"
               required
             >
-              <option value="red">Red</option>
-              <option value="yellow">Yellow</option>
-              <option value="green">Green</option>
+              <option value="red">Rojo</option>
+              <option value="yellow">Amarillo</option>
+              <option value="green">Verde</option>
             </select>
           </div>
           <button
             type="submit"
-            className="game-button-success w-full"
+            className="button-success w-full"
           >
-            Add Card
+            Agregar Tarjeta
           </button>
         </form>
       </div>
 
       {/* Status Messages */}
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+        <div className="error-message" role="alert">
           {error}
         </div>
       )}
       {success && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
+        <div className="success-message" role="alert">
           {success}
         </div>
       )}
 
       {/* Cards List */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold mb-4">Existing Cards</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="admin-card">
+        <h2>Tarjetas Existentes</h2>
+        <div className="card-grid">
           {cards.map((card) => (
             <div
               key={card.id}
-              className={`card-${card.color} p-4 rounded-lg relative`}
+              className={`card card-${card.color} relative`}
             >
               <button
                 onClick={() => handleDelete(card.id)}
-                className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                className="delete-button"
+                aria-label="Delete card"
               >
                 ×
               </button>
-              <h3 className="font-semibold mb-2">Question:</h3>
+              <h3>Pregunta:</h3>
               <p className="mb-4">{card.question}</p>
-              <h3 className="font-semibold mb-2">Answer:</h3>
+              <h3>Respuesta:</h3>
               <p>{card.answer}</p>
             </div>
           ))}
