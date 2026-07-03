@@ -1,4 +1,4 @@
-const HALF_HOUR_MS = 30 * 60 * 1000;
+export const BOGOTA_TZ = 'America/Bogota';
 
 export function parseTimeToMinutes(time: string): number {
   const [hours, minutes] = time.split(':').map(Number);
@@ -22,28 +22,32 @@ export function formatHours(hours: number): string {
   return `${whole}h 30m`;
 }
 
-export function roundToHalfHour(hours: number): number {
-  return Math.round(hours * 2) / 2;
-}
-
 export function isValidTimeRange(startTime: string, endTime: string): boolean {
   return calculateHoursFromTimes(startTime, endTime) > 0;
 }
 
+function addDaysToIso(iso: string, days: number): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d + days, 12, 0, 0));
+  return date.toISOString().split('T')[0];
+}
+
 export function getDateRange(startDate: string, endDate: string): string[] {
   const dates: string[] = [];
-  const current = new Date(startDate + 'T12:00:00');
-  const end = new Date(endDate + 'T12:00:00');
-  while (current <= end) {
-    dates.push(current.toISOString().split('T')[0]);
-    current.setDate(current.getDate() + 1);
+  let current = startDate;
+  while (current <= endDate) {
+    dates.push(current);
+    current = addDaysToIso(current, 1);
   }
   return dates;
 }
 
+const dateFormatOpts = { timeZone: BOGOTA_TZ } as const;
+
 export function formatDateEs(dateStr: string): string {
-  const date = new Date(dateStr + 'T12:00:00');
+  const date = new Date(dateStr + 'T12:00:00Z');
   return date.toLocaleDateString('es-CO', {
+    ...dateFormatOpts,
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -51,8 +55,9 @@ export function formatDateEs(dateStr: string): string {
 }
 
 export function formatDateLongEs(dateStr: string): string {
-  const date = new Date(dateStr + 'T12:00:00');
+  const date = new Date(dateStr + 'T12:00:00Z');
   return date.toLocaleDateString('es-CO', {
+    ...dateFormatOpts,
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -61,7 +66,15 @@ export function formatDateLongEs(dateStr: string): string {
 }
 
 export function todayIso(): string {
-  return new Date().toISOString().split('T')[0];
+  return new Date().toLocaleDateString('en-CA', { timeZone: BOGOTA_TZ });
 }
 
-export { HALF_HOUR_MS };
+export function formatTimestampEs(ts: number): string {
+  return new Date(ts).toLocaleString('es-CO', {
+    timeZone: BOGOTA_TZ,
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}

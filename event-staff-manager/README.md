@@ -69,7 +69,30 @@ npm start
 | Super Admin    | Todo + eliminar eventos + gestionar usuarios          |
 | Gestor de Día  | Personal, asignaciones, pagos, auditoría (lectura)    |
 
-El primer usuario que inicia sesión se convierte automáticamente en Super Admin.
+El primer usuario que inicia sesión se convierte automáticamente en Super Admin. Los siguientes inician como Gestor de Día.
+
+## Decisiones de configuración (confirmadas)
+
+| Tema | Configuración |
+|------|---------------|
+| Firebase | Tú creas el proyecto y completas `.env` |
+| Nuevos admins | Primer login = Super Admin; siguientes = Gestor de Día |
+| Gestor de Día | Mismos permisos operativos (incl. archivar personal) |
+| Sin tarifa | No se puede asignar turno sin tarifa por hora |
+| Horarios | Inicio/fin incluyen descansos; turnos nocturnos soportados |
+| Zona horaria | Colombia (America/Bogota) |
+| Eventos completados | Solo lectura; Super Admin puede reactivar |
+| Historial | Todos los eventos visibles con nómina y CSV |
+| Datos iniciales | Empezar desde cero |
+| Hosting | Firebase Hosting (`firebase deploy`) |
+
+## Despliegue en producción
+
+```bash
+cd event-staff-manager
+npm run build
+firebase deploy
+```
 
 ## Próximas versiones (v2)
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Event, EventDay, StaffMember } from '../types';
 import {
@@ -29,18 +29,20 @@ import {
 import { formatDateEs, formatDateLongEs, isValidTimeRange } from '../utils/time';
 import { formatCop } from '../utils/currency';
 import { exportDayPayrollCsv } from '../utils/csv';
-import { PlusIcon, TrashIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, CheckCircleIcon, EyeIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 
 export default function EventPage() {
   const { firebaseUser, appUser, isSuperAdmin } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [activeEvent, setActiveEvent] = useState<Event | null>(null);
+  const [displayEvent, setDisplayEvent] = useState<Event | null>(null);
   const [days, setDays] = useState<EventDay[]>([]);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [assignments, setAssignments] = useState<Awaited<ReturnType<typeof getAssignmentsWithStaffForDay>>>([]);
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   const [createEventOpen, setCreateEventOpen] = useState(false);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
@@ -60,34 +62,41 @@ export default function EventPage() {
   });
 
   const selectedDay = days[selectedDayIndex];
+  const isReadOnly = displayEvent?.status === 'completed';
+  const isViewingHistory = displayEvent && activeEvent && displayEvent.id !== activeEvent.id;
+  const pastEvents = events.filter((e) => e.status === 'completed' || (e.status === 'draft' && e.id !== activeEvent?.id));
 
-  const loadEvents = async () => {
-    const [allEvents, active] = await Promise.all([getEvents(), getActiveEvent()]);
-    setEvents(allEvents);
-    setActiveEvent(active);
-    return active;
-  };
-
-  const loadDayData = async (eventId: string, dayId: string) => {
+  const loadDayData = useCallback(async (eventId: string, dayId: string) => {
     const [dayAssignments, activeStaff] = await Promise.all([
       getAssignmentsWithStaffForDay(dayId),
       getActiveStaff(),
     ]);
     setAssignments(dayAssignments);
     setStaff(activeStaff);
-  };
+  }, []);
 
-  const load = async () => {
+  const loadEventView = useCallback(async (event: Event) => {
+    const eventDays = await getEventDays(event.id);
+    setDisplayEvent(event);
+    setDays(eventDays);
+    setSelectedDayIndex(0);
+    if (eventDays.length > 0) {
+      await loadDayData(event.id, eventDays[0].id);
+    } else {
+      setAssignments([]);
+    }
+  }, [loadDayData]);
+
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const active = await loadEvents();
+      const [allEvents, active] = await Promise.all([getEvents(), getActiveEvent()]);
+      setEvents(allEvents);
+      setActiveEvent(active);
       if (active) {
-        const eventDays = await getEventDays(active.id);
-        setDays(eventDays);
-        if (eventDays.length > 0) {
-          await loadDayData(active.id, eventDays[selectedDayIndex]?.id || eventDays[0].id);
-        }
+        await loadEventView(active);
       } else {
+        setDisplayEvent(null);
         setDays([]);
         setAssignments([]);
       }
@@ -96,17 +105,17 @@ export default function EventPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [loadEventView]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   useEffect(() => {
-    if (activeEvent && selectedDay) {
-      loadDayData(activeEvent.id, selectedDay.id);
+    if (displayEvent && selectedDay) {
+      loadDayData(displayEvent.id, selectedDay.id);
     }
-  }, [selectedDayIndex, activeEvent?.id]);
+  }, [selectedDayIndex, displayEvent?.id, selectedDay, loadDayData, displayEvent]);
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,13 +129,11 @@ export default function EventPage() {
       setCreateEventOpen(false);
       setEventForm({ name: '', venueName: '', startDate: '', endDate: '' });
       setAlert({ type: 'success', message: 'Evento creado y activado.' });
-      await loadEvents();
-      const eventDays = await getEventDays(id);
-      setDays(eventDays);
-      setSelectedDayIndex(0);
       const active = await getActiveEvent();
       setActiveEvent(active);
-      if (eventDays[0]) await loadDayData(id, eventDays[0].id);
+      const allEvents = await getEvents();
+      setEvents(allEvents);
+      if (active) await loadEventView(active);
     } catch {
       setAlert({ type: 'error', message: 'Error al crear el evento.' });
     }
@@ -134,28 +141,36 @@ export default function EventPage() {
 
   const handleActivateEvent = async (event: Event) => {
     if (!firebaseUser || !appUser) return;
+    if (event.status === 'completed' && !isSuperAdmin) {
+      setAlert({ type: 'error', message: 'Solo Super Admin puede reactivar eventos completados.' });
+      return;
+    }
     try {
       await setEventStatus(event.id, 'active', firebaseUser.uid, appUser.email);
       setAlert({ type: 'success', message: `"${event.name}" activado.` });
-      const active = await getActiveEvent();
+      const [active, allEvents] = await Promise.all([getActiveEvent(), getEvents()]);
       setActiveEvent(active);
-      if (active) {
-        const eventDays = await getEventDays(active.id);
-        setDays(eventDays);
-        setSelectedDayIndex(0);
-        if (eventDays[0]) await loadDayData(active.id, eventDays[0].id);
-      }
-      await loadEvents();
+      setEvents(allEvents);
+      if (active) await loadEventView(active);
     } catch {
       setAlert({ type: 'error', message: 'Error al activar evento.' });
     }
   };
 
+  const handleViewEvent = async (event: Event) => {
+    await loadEventView(event);
+    setShowHistory(false);
+  };
+
+  const handleBackToActive = async () => {
+    if (activeEvent) await loadEventView(activeEvent);
+  };
+
   const handleCompleteEvent = async () => {
-    if (!activeEvent || !firebaseUser || !appUser) return;
-    if (!window.confirm('¿Marcar este evento como completado?')) return;
+    if (!displayEvent || !firebaseUser || !appUser || displayEvent.status !== 'active') return;
+    if (!window.confirm('¿Marcar este evento como completado? Quedará en solo lectura.')) return;
     try {
-      await setEventStatus(activeEvent.id, 'completed', firebaseUser.uid, appUser.email);
+      await setEventStatus(displayEvent.id, 'completed', firebaseUser.uid, appUser.email);
       setAlert({ type: 'success', message: 'Evento completado.' });
       load();
     } catch {
@@ -176,6 +191,7 @@ export default function EventPage() {
   };
 
   const openAssign = (assignmentId?: string) => {
+    if (isReadOnly) return;
     if (assignmentId) {
       const a = assignments.find((x) => x.id === assignmentId);
       if (a) {
@@ -195,7 +211,7 @@ export default function EventPage() {
 
   const handleAssign = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firebaseUser || !appUser || !activeEvent || !selectedDay) return;
+    if (!firebaseUser || !appUser || !displayEvent || !selectedDay || isReadOnly) return;
 
     const member = staff.find((s) => s.id === assignForm.staffMemberId);
     if (!member?.defaultHourlyWage) {
@@ -220,7 +236,7 @@ export default function EventPage() {
         setAlert({ type: 'success', message: 'Turno actualizado.' });
       } else {
         await createAssignment(
-          activeEvent.id,
+          displayEvent.id,
           selectedDay.id,
           assignForm.staffMemberId,
           assignForm.startTime,
@@ -232,7 +248,7 @@ export default function EventPage() {
         setAlert({ type: 'success', message: 'Personal asignado.' });
       }
       setAssignModalOpen(false);
-      loadDayData(activeEvent.id, selectedDay.id);
+      loadDayData(displayEvent.id, selectedDay.id);
     } catch (err) {
       setAlert({
         type: 'error',
@@ -242,18 +258,18 @@ export default function EventPage() {
   };
 
   const handleRemoveAssignment = async (id: string) => {
-    if (!firebaseUser || !appUser || !activeEvent || !selectedDay) return;
+    if (!firebaseUser || !appUser || !displayEvent || !selectedDay || isReadOnly) return;
     if (!window.confirm('¿Quitar esta asignación?')) return;
     try {
       await deleteAssignment(id, firebaseUser.uid, appUser.email);
-      loadDayData(activeEvent.id, selectedDay.id);
+      loadDayData(displayEvent.id, selectedDay.id);
     } catch {
       setAlert({ type: 'error', message: 'Error al eliminar asignación.' });
     }
   };
 
   const handleTogglePaid = async (id: string, current: string) => {
-    if (!firebaseUser || !appUser || !activeEvent || !selectedDay) return;
+    if (!firebaseUser || !appUser || !displayEvent || !selectedDay || isReadOnly) return;
     try {
       if (current === 'paid') {
         const { markAssignmentPending } = await import('../services/assignmentService');
@@ -261,18 +277,18 @@ export default function EventPage() {
       } else {
         await markAssignmentPaid(id, firebaseUser.uid, appUser.email);
       }
-      loadDayData(activeEvent.id, selectedDay.id);
+      loadDayData(displayEvent.id, selectedDay.id);
     } catch {
       setAlert({ type: 'error', message: 'Error al actualizar pago.' });
     }
   };
 
   const handleMarkAllPaid = async () => {
-    if (!firebaseUser || !appUser || !selectedDay || !activeEvent) return;
+    if (!firebaseUser || !appUser || !selectedDay || !displayEvent || isReadOnly) return;
     try {
       await markAllDayPaid(selectedDay.id, firebaseUser.uid, appUser.email);
       setAlert({ type: 'success', message: 'Todos los pagos del día marcados.' });
-      loadDayData(activeEvent.id, selectedDay.id);
+      loadDayData(displayEvent.id, selectedDay.id);
     } catch {
       setAlert({ type: 'error', message: 'Error al marcar pagos.' });
     }
@@ -285,13 +301,23 @@ export default function EventPage() {
   const assignedIds = new Set(assignments.map((a) => a.staffMemberId));
   const availableStaff = staff.filter((s) => !assignedIds.has(s.id) || editingAssignment);
 
+  const statusBadge = (status: Event['status']) => {
+    const labels = { active: 'Activo', completed: 'Completado', draft: 'Borrador' };
+    const classes = {
+      active: 'badge-green',
+      completed: 'badge-gray',
+      draft: 'badge-yellow',
+    };
+    return <span className={`badge mt-2 ${classes[status]}`}>{labels[status]}</span>;
+  };
+
   if (loading) return <LoadingSpinner />;
 
   return (
     <div>
       {alert && <Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} />}
 
-      {!activeEvent ? (
+      {!displayEvent ? (
         <>
           <PageHeader
             title="Eventos"
@@ -314,6 +340,7 @@ export default function EventPage() {
             />
           ) : (
             <div className="space-y-3">
+              <p className="text-sm text-gray-500 mb-2">Historial de eventos</p>
               {events.map((event) => (
                 <div key={event.id} className="card-padded flex items-center justify-between gap-3">
                   <div>
@@ -322,25 +349,21 @@ export default function EventPage() {
                     <p className="text-xs text-gray-400 mt-1">
                       {event.startDate} — {event.endDate}
                     </p>
-                    <span
-                      className={`badge mt-2 ${
-                        event.status === 'active'
-                          ? 'badge-green'
-                          : event.status === 'completed'
-                          ? 'badge-gray'
-                          : 'badge-yellow'
-                      }`}
-                    >
-                      {event.status === 'active'
-                        ? 'Activo'
-                        : event.status === 'completed'
-                        ? 'Completado'
-                        : 'Borrador'}
-                    </span>
+                    {statusBadge(event.status)}
                   </div>
                   <div className="flex flex-col gap-2">
+                    {event.status === 'completed' && (
+                      <button onClick={() => handleViewEvent(event)} className="btn-secondary btn-sm">
+                        <EyeIcon className="w-4 h-4" />
+                        Ver
+                      </button>
+                    )}
                     {event.status !== 'active' && (
-                      <button onClick={() => handleActivateEvent(event)} className="btn-primary btn-sm">
+                      <button
+                        onClick={() => handleActivateEvent(event)}
+                        className="btn-primary btn-sm"
+                        disabled={event.status === 'completed' && !isSuperAdmin}
+                      >
                         Activar
                       </button>
                     )}
@@ -357,19 +380,40 @@ export default function EventPage() {
         </>
       ) : (
         <>
-          <PageHeader
-            title={activeEvent.name}
-            subtitle={`${activeEvent.venueName} · ${activeEvent.startDate} — ${activeEvent.endDate}`}
-            action={
-              <div className="flex gap-2">
+          {isReadOnly && (
+            <div className="bg-gray-100 border border-gray-200 rounded-lg px-4 py-3 mb-4 text-sm text-gray-600">
+              Solo lectura — evento completado
+              {isSuperAdmin && (
                 <button
-                  onClick={() => selectedDay && exportDayPayrollCsv(activeEvent, selectedDay.date, assignments)}
+                  onClick={() => handleActivateEvent(displayEvent)}
+                  className="btn-primary btn-sm ml-3"
+                >
+                  Reactivar
+                </button>
+              )}
+            </div>
+          )}
+
+          {isViewingHistory && activeEvent && (
+            <button onClick={handleBackToActive} className="btn-ghost btn-sm mb-3 -ml-1">
+              <ArrowLeftIcon className="w-4 h-4" />
+              Volver a {activeEvent.name}
+            </button>
+          )}
+
+          <PageHeader
+            title={displayEvent.name}
+            subtitle={`${displayEvent.venueName} · ${displayEvent.startDate} — ${displayEvent.endDate}`}
+            action={
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={() => selectedDay && exportDayPayrollCsv(displayEvent, selectedDay.date, assignments)}
                   className="btn-secondary btn-sm"
                   disabled={assignments.length === 0}
                 >
                   CSV
                 </button>
-                {isSuperAdmin && (
+                {!isReadOnly && isSuperAdmin && (
                   <button onClick={handleCompleteEvent} className="btn-secondary btn-sm">
                     Completar
                   </button>
@@ -406,18 +450,20 @@ export default function EventPage() {
             <StatCard label="Pendientes" value={String(pendingCount)} sub="pagos" />
           </div>
 
-          <div className="flex gap-2 mb-4">
-            <button onClick={() => openAssign()} className="btn-primary flex-1">
-              <PlusIcon className="w-4 h-4" />
-              Asignar personal
-            </button>
-            {pendingCount > 0 && (
-              <button onClick={handleMarkAllPaid} className="btn-secondary">
-                <CheckCircleIcon className="w-4 h-4" />
-                Pagar todo
+          {!isReadOnly && (
+            <div className="flex gap-2 mb-4">
+              <button onClick={() => openAssign()} className="btn-primary flex-1">
+                <PlusIcon className="w-4 h-4" />
+                Asignar personal
               </button>
-            )}
-          </div>
+              {pendingCount > 0 && (
+                <button onClick={handleMarkAllPaid} className="btn-secondary">
+                  <CheckCircleIcon className="w-4 h-4" />
+                  Pagar todo
+                </button>
+              )}
+            </div>
+          )}
 
           {assignments.length === 0 ? (
             <EmptyState message="No hay personal asignado para este día." />
@@ -429,9 +475,7 @@ export default function EventPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-semibold">{a.staffName}</h3>
-                        <span
-                          className={a.paymentStatus === 'paid' ? 'badge-green' : 'badge-yellow'}
-                        >
+                        <span className={a.paymentStatus === 'paid' ? 'badge-green' : 'badge-yellow'}>
                           {a.paymentStatus === 'paid' ? 'Pagado' : 'Pendiente'}
                         </span>
                       </div>
@@ -442,26 +486,60 @@ export default function EventPage() {
                         {formatCop(a.paymentAmount)}
                       </p>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <button onClick={() => openAssign(a.id)} className="btn-ghost btn-sm">
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => handleTogglePaid(a.id, a.paymentStatus)}
-                        className="btn-ghost btn-sm"
-                      >
-                        {a.paymentStatus === 'paid' ? 'Desmarcar' : 'Pagado'}
-                      </button>
-                      <button
-                        onClick={() => handleRemoveAssignment(a.id)}
-                        className="btn-ghost btn-sm text-red-500"
-                      >
-                        <TrashIcon className="w-4 h-4" />
-                      </button>
-                    </div>
+                    {!isReadOnly && (
+                      <div className="flex flex-col gap-1">
+                        <button onClick={() => openAssign(a.id)} className="btn-ghost btn-sm">
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleTogglePaid(a.id, a.paymentStatus)}
+                          className="btn-ghost btn-sm"
+                        >
+                          {a.paymentStatus === 'paid' ? 'Desmarcar' : 'Pagado'}
+                        </button>
+                        <button
+                          onClick={() => handleRemoveAssignment(a.id)}
+                          className="btn-ghost btn-sm text-red-500"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {activeEvent && pastEvents.length > 0 && !isViewingHistory && (
+            <div className="mt-8 border-t pt-6">
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                className="text-sm font-medium text-primary-600 mb-3"
+              >
+                {showHistory ? '▲ Ocultar historial' : '▼ Historial de eventos'}
+              </button>
+              {showHistory && (
+                <div className="space-y-2">
+                  {pastEvents.map((event) => (
+                    <div
+                      key={event.id}
+                      className="card-padded flex items-center justify-between gap-3 py-3"
+                    >
+                      <div>
+                        <p className="font-medium text-sm">{event.name}</p>
+                        <p className="text-xs text-gray-400">
+                          {event.startDate} — {event.endDate}
+                        </p>
+                      </div>
+                      <button onClick={() => handleViewEvent(event)} className="btn-secondary btn-sm">
+                        <EyeIcon className="w-4 h-4" />
+                        Ver
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </>

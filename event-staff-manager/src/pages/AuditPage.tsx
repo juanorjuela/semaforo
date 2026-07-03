@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AuditLogEntry } from '../types';
 import { getAuditLogs } from '../services/auditService';
 import { PageHeader, LoadingSpinner, EmptyState } from '../components/ui';
+import { formatTimestampEs } from '../utils/time';
 
 export default function AuditPage() {
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
@@ -13,14 +14,6 @@ export default function AuditPage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
-
-  const formatTime = (ts: number) =>
-    new Date(ts).toLocaleString('es-CO', {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
 
   const actionLabel: Record<string, string> = {
     CREATE: 'Creación',
@@ -59,7 +52,7 @@ export default function AuditPage() {
                   <p className="text-gray-700 mt-2">{log.details}</p>
                   <p className="text-xs text-gray-400 mt-1">{log.userEmail}</p>
                 </div>
-                <time className="text-xs text-gray-400 whitespace-nowrap">{formatTime(log.timestamp)}</time>
+                <time className="text-xs text-gray-400 whitespace-nowrap">{formatTimestampEs(log.timestamp)}</time>
               </div>
             </div>
           ))}
