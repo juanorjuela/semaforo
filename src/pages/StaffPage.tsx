@@ -223,7 +223,7 @@ export default function StaffPage() {
         }}
         title={editing ? 'Editar personal' : 'Nuevo personal'}
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           {modalError && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
               {modalError}
@@ -252,7 +252,9 @@ export default function StaffPage() {
               <label className="label">Correo</label>
               <input
                 className="input"
-                type="email"
+                type="text"
+                inputMode="email"
+                autoComplete="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
               />
@@ -302,13 +304,15 @@ export default function StaffPage() {
               onChange={(e) => setForm({ ...form, backgroundNotes: e.target.value })}
             />
           </div>
-          <button type="submit" className="btn-primary w-full" disabled={saving}>
-            {saving
-              ? 'Guardando...'
-              : editing
-              ? 'Guardar cambios'
-              : 'Agregar personal'}
-          </button>
+          <div className="sticky bottom-0 bg-white pt-3 pb-1 border-t border-gray-100 -mx-1 px-1">
+            <button type="submit" className="btn-primary w-full" disabled={saving}>
+              {saving
+                ? 'Guardando...'
+                : editing
+                ? 'Guardar cambios'
+                : 'Agregar personal'}
+            </button>
+          </div>
         </form>
       </Modal>
     </div>
