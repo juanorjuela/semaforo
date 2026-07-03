@@ -118,7 +118,9 @@ export default function StaffPage() {
       load();
     } catch (err) {
       console.error('Error saving staff:', err);
-      setModalError(getFirebaseErrorMessage(err, 'Error al guardar. Intenta de nuevo.'));
+      const message = getFirebaseErrorMessage(err, 'Error al guardar. Intenta de nuevo.');
+      setModalError(message);
+      setAlert({ type: 'error', message });
       requestAnimationFrame(() => errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
     } finally {
       setSaving(false);

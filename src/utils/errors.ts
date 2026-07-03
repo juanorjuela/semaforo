@@ -10,6 +10,15 @@ export function getFirebaseErrorMessage(err: unknown, fallback: string): string 
     if (code === 'unavailable') {
       return 'Sin conexión. Revisa tu internet e intenta de nuevo.';
     }
+    if (code === 'invalid-argument') {
+      return 'Datos inválidos al guardar. Solo el nombre es obligatorio; deja los demás campos vacíos si no aplican.';
+    }
+  }
+  if (err && typeof err === 'object' && 'message' in err) {
+    const message = String((err as { message: string }).message);
+    if (message.includes('undefined')) {
+      return 'Error al guardar campos vacíos. Actualiza la página e intenta de nuevo.';
+    }
   }
   return fallback;
 }
