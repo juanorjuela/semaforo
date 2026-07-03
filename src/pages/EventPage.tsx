@@ -622,7 +622,7 @@ export default function EventPage() {
         }}
         title="Nuevo evento"
       >
-        <form onSubmit={handleCreateEvent} className="space-y-4">
+        <form onSubmit={handleCreateEvent} noValidate className="space-y-4">
           {createEventError && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
               {createEventError}
@@ -669,9 +669,11 @@ export default function EventPage() {
               />
             </div>
           </div>
-          <button type="submit" className="btn-primary w-full" disabled={creatingEvent}>
-            {creatingEvent ? 'Creando evento...' : 'Crear y activar evento'}
-          </button>
+          <div className="sticky bottom-0 bg-white pt-3 pb-1 border-t border-gray-100 -mx-1 px-1">
+            <button type="submit" className="btn-primary w-full" disabled={creatingEvent}>
+              {creatingEvent ? 'Creando evento...' : 'Crear y activar evento'}
+            </button>
+          </div>
         </form>
       </Modal>
 
@@ -685,7 +687,7 @@ export default function EventPage() {
         }}
         title={editingAssignment ? 'Editar turno' : 'Asignar personal'}
       >
-        <form onSubmit={handleAssign} className="space-y-4">
+        <form onSubmit={handleAssign} noValidate className="space-y-4">
           {assignError && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
               {assignError}
@@ -732,9 +734,11 @@ export default function EventPage() {
               />
             </div>
           </div>
-          <button type="submit" className="btn-primary w-full" disabled={assigning}>
-            {assigning ? 'Guardando...' : editingAssignment ? 'Guardar turno' : 'Asignar'}
-          </button>
+          <div className="sticky bottom-0 bg-white pt-3 pb-1 border-t border-gray-100 -mx-1 px-1">
+            <button type="submit" className="btn-primary w-full" disabled={assigning}>
+              {assigning ? 'Guardando...' : editingAssignment ? 'Guardar turno' : 'Asignar'}
+            </button>
+          </div>
         </form>
       </Modal>
     </div>

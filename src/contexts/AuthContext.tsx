@@ -2,7 +2,6 @@ import React, { createContext, useContext, useEffect, useState, ReactNode, useCa
 import {
   User,
   onAuthStateChanged,
-  signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
   signOut as firebaseSignOut,
@@ -10,7 +9,6 @@ import {
 import { auth, googleProvider } from '../config/firebase';
 import { AppUser } from '../types';
 import { getOrCreateUser } from '../services/userService';
-import { isMobileDevice } from '../utils/device';
 
 interface AuthContextType {
   firebaseUser: User | null;
@@ -86,12 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = async () => {
     if (!auth) throw new Error('Firebase no configurado');
     setProfileError(null);
-
-    if (isMobileDevice()) {
-      await signInWithRedirect(auth, googleProvider);
-    } else {
-      await signInWithPopup(auth, googleProvider);
-    }
+    await signInWithRedirect(auth, googleProvider);
   };
 
   const signOut = async () => {
