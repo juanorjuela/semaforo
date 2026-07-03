@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super-admin';
+    }
+
+    function bootstrapExists() {
+      return exists(/databases/$(database)/documents/meta/bootstrap);
+    }
+
+    match /meta/bootstrap {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && !bootstrapExists();
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow read: if isSuperAdmin();
+      allow create: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasAll(['email', 'displayName', 'role', 'createdAt'])
+        && (
+          (request.resource.data.role == 'super-admin' && !bootstrapExists())
+          || (request.resource.data.role == 'day-manager' && bootstrapExists())
+        );
+      allow update: if isSuperAdmin();
+    }
+
+    match /staff/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /events/{docId} {
+      allow read, write: if isAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    match /eventDays/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /assignments/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /auditLogs/{docId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+    }
+  }
+}
