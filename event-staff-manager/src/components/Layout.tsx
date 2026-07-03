@@ -31,7 +31,7 @@ export default function Layout() {
       <header className="bg-primary-600 text-white sticky top-0 z-40 shadow-md">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div>
-            <p className="text-xs text-primary-200 font-medium">Gestión de Personal</p>
+            <p className="text-xs text-primary-200 font-medium">Ecoguardianas</p>
             <p className="text-sm font-semibold truncate max-w-[200px] sm:max-w-none">
               {appUser?.displayName}
             </p>

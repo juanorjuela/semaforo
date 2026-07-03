@@ -1,4 +1,4 @@
-# Gestión de Personal para Eventos
+# Ecoguardianas — Gestión de Personal para Eventos
 
 Sistema de administración de personal para festivales, conciertos y eventos. Permite gestionar trabajadores, asignar turnos por día, calcular pagos en pesos colombianos (COP) y exportar nómina.
 
@@ -20,15 +20,26 @@ Sistema de administración de personal para festivales, conciertos y eventos. Pe
 - Proyecto Firebase con Firestore y Authentication (Google)
 - Cuenta de Firebase CLI (`npm install -g firebase-tools`)
 
-## Firebase compartido
+## Proyecto Firebase: Ecoguardianas
 
-Este app usa el **mismo proyecto Firebase** que Semáforos de Igualdad (`semaforo-de-igualdad`).
+Este app usa el proyecto Firebase **Ecoguardianas** — completamente independiente de cualquier otro proyecto.
 
-- El juego usa la colección `cards`
-- Este app usa colecciones separadas: `staff`, `events`, `assignments`, etc.
-- Las reglas de Firestore protegen el staff app sin afectar `cards`
+**Colecciones Firestore:**
+`meta/bootstrap`, `users`, `staff`, `events`, `eventDays`, `assignments`, `auditLogs`
 
-Copia las credenciales del juego a `.env` (o usa el `.env` ya generado con las mismas credenciales de `src/config/firebase.ts`).
+### Obtener credenciales
+
+1. Firebase Console → proyecto **Ecoguardianas**
+2. Configuración del proyecto (⚙️) → **Tus apps** → agregar app **Web**
+3. Copia las credenciales a `.env`
+
+### Authentication (ya en progreso)
+
+En **Authentication → Método de acceso → Google**:
+- Habilitar Google
+- Nombre público: `ecoguardianas`
+- Correo de asistencia del proyecto: tu email
+- Guardar
 
 ## Configuración local
 
