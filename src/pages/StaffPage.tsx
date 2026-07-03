@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { StaffMember } from '../types';
 import {
@@ -36,6 +36,8 @@ export default function StaffPage() {
   const [form, setForm] = useState(emptyForm);
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [search, setSearch] = useState('');
+  const errorRef = useRef<HTMLDivElement>(null);
+  const formId = 'staff-form';
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -117,6 +119,7 @@ export default function StaffPage() {
     } catch (err) {
       console.error('Error saving staff:', err);
       setModalError(getFirebaseErrorMessage(err, 'Error al guardar. Intenta de nuevo.'));
+      requestAnimationFrame(() => errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
     } finally {
       setSaving(false);
     }
@@ -222,35 +225,73 @@ export default function StaffPage() {
           }
         }}
         title={editing ? 'Editar personal' : 'Nuevo personal'}
+        footer={
+          <div className="space-y-2">
+            {modalError && (
+              <div
+                ref={errorRef}
+                className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+              >
+                {modalError}
+              </div>
+            )}
+            <button
+              type="submit"
+              form={formId}
+              className="btn-primary w-full min-h-[48px]"
+              disabled={saving}
+            >
+              {saving
+                ? 'Guardando...'
+                : editing
+                ? 'Guardar cambios'
+                : 'Agregar personal'}
+            </button>
+          </div>
+        }
       >
-        <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        <form id={formId} onSubmit={handleSubmit} noValidate className="space-y-4">
           {modalError && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
               {modalError}
             </div>
           )}
           <div>
-            <label className="label">Nombre *</label>
+            <label className="label" htmlFor="staff-name">
+              Nombre *
+            </label>
             <input
+              id="staff-name"
+              name="name"
               className="input"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
+              autoComplete="name"
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="label">Teléfono</label>
+              <label className="label" htmlFor="staff-phone">
+                Teléfono
+              </label>
               <input
+                id="staff-phone"
+                name="phone"
                 className="input"
                 type="tel"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                autoComplete="tel"
               />
             </div>
             <div>
-              <label className="label">Correo</label>
+              <label className="label" htmlFor="staff-email">
+                Correo
+              </label>
               <input
+                id="staff-email"
+                name="email"
                 className="input"
                 type="text"
                 inputMode="email"
@@ -261,16 +302,25 @@ export default function StaffPage() {
             </div>
           </div>
           <div>
-            <label className="label">Dirección</label>
+            <label className="label" htmlFor="staff-address">
+              Dirección
+            </label>
             <input
+              id="staff-address"
+              name="address"
               className="input"
               value={form.address}
               onChange={(e) => setForm({ ...form, address: e.target.value })}
+              autoComplete="street-address"
             />
           </div>
           <div>
-            <label className="label">Tarifa por hora (COP)</label>
+            <label className="label" htmlFor="staff-wage">
+              Tarifa por hora (COP)
+            </label>
             <input
+              id="staff-wage"
+              name="defaultHourlyWage"
               className="input"
               inputMode="numeric"
               placeholder="ej. 15000"
@@ -280,16 +330,24 @@ export default function StaffPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="label">Aseguradora de salud</label>
+              <label className="label" htmlFor="staff-insurance">
+                Aseguradora de salud
+              </label>
               <input
+                id="staff-insurance"
+                name="healthInsuranceProvider"
                 className="input"
                 value={form.healthInsuranceProvider}
                 onChange={(e) => setForm({ ...form, healthInsuranceProvider: e.target.value })}
               />
             </div>
             <div>
-              <label className="label">Nº de póliza</label>
+              <label className="label" htmlFor="staff-policy">
+                Nº de póliza
+              </label>
               <input
+                id="staff-policy"
+                name="healthInsurancePolicy"
                 className="input"
                 value={form.healthInsurancePolicy}
                 onChange={(e) => setForm({ ...form, healthInsurancePolicy: e.target.value })}
@@ -297,21 +355,16 @@ export default function StaffPage() {
             </div>
           </div>
           <div>
-            <label className="label">Notas / antecedentes</label>
+            <label className="label" htmlFor="staff-notes">
+              Notas / antecedentes
+            </label>
             <textarea
+              id="staff-notes"
+              name="backgroundNotes"
               className="input min-h-[80px]"
               value={form.backgroundNotes}
               onChange={(e) => setForm({ ...form, backgroundNotes: e.target.value })}
             />
-          </div>
-          <div className="sticky bottom-0 bg-white pt-3 pb-1 border-t border-gray-100 -mx-1 px-1">
-            <button type="submit" className="btn-primary w-full" disabled={saving}>
-              {saving
-                ? 'Guardando...'
-                : editing
-                ? 'Guardar cambios'
-                : 'Agregar personal'}
-            </button>
           </div>
         </form>
       </Modal>

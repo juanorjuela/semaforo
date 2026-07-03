@@ -68,11 +68,13 @@ export function Modal({
   onClose,
   title,
   children,
+  footer,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
+  footer?: ReactNode;
 }) {
   if (!open) return null;
 
@@ -80,18 +82,28 @@ export function Modal({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden="true" />
       <div
-        className="relative bg-white w-full sm:max-w-lg sm:rounded-xl rounded-t-2xl max-h-[90vh] overflow-y-auto shadow-xl pb-[env(safe-area-inset-bottom)]"
+        className="relative bg-white w-full sm:max-w-lg sm:rounded-xl rounded-t-2xl max-h-[90dvh] flex flex-col shadow-xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
       >
-        <div className="sticky top-0 bg-white border-b px-4 py-3 flex items-center justify-between">
+        <div className="flex-shrink-0 border-b px-4 py-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none p-1">
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-2xl leading-none p-1"
+            aria-label="Cerrar"
+          >
             ×
           </button>
         </div>
-        <div className="p-4">{children}</div>
+        <div className="flex-1 overflow-y-auto p-4 min-h-0">{children}</div>
+        {footer && (
+          <div className="flex-shrink-0 border-t bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );
