@@ -4,6 +4,7 @@ import {
   getDocs,
   query,
   orderBy,
+  limit as firestoreLimit,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { AuditLogEntry } from '../types';
@@ -28,9 +29,13 @@ export async function logAudit(
 }
 
 export async function getAuditLogs(limit = 100): Promise<AuditLogEntry[]> {
-  const q = query(collection(db, 'auditLogs'), orderBy('timestamp', 'desc'));
+  const q = query(
+    collection(db, 'auditLogs'),
+    orderBy('timestamp', 'desc'),
+    firestoreLimit(limit)
+  );
   const snapshot = await getDocs(q);
-  return snapshot.docs.slice(0, limit).map((d) => ({
+  return snapshot.docs.map((d) => ({
     id: d.id,
     ...d.data(),
   })) as AuditLogEntry[];

@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Alert } from '../components/ui';
+import { Alert, LoadingSpinner } from '../components/ui';
 
 export default function LoginPage() {
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, firebaseUser, appUser, loading, profileError } = useAuth();
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
+
+  if (!loading && firebaseUser && appUser) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleLogin = async () => {
-    setLoading(true);
+    setSigningIn(true);
     setError(null);
     try {
       await signInWithGoogle();
@@ -16,9 +21,17 @@ export default function LoginPage() {
       setError('No se pudo iniciar sesión. Intenta de nuevo.');
       console.error(err);
     } finally {
-      setLoading(false);
+      setSigningIn(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-primary-600 to-primary-700">
@@ -31,14 +44,16 @@ export default function LoginPage() {
           Administra el personal, horarios y pagos de tus eventos
         </p>
 
-        {error && <Alert type="error" message={error} onClose={() => setError(null)} />}
+        {(error || profileError) && (
+          <Alert type="error" message={error || profileError || ''} onClose={() => setError(null)} />
+        )}
 
         <button
           onClick={handleLogin}
-          disabled={loading}
+          disabled={signingIn}
           className="btn-primary w-full text-base"
         >
-          {loading ? 'Conectando...' : 'Iniciar sesión con Google'}
+          {signingIn ? 'Conectando...' : 'Iniciar sesión con Google'}
         </button>
 
         <p className="text-xs text-gray-400 mt-6">

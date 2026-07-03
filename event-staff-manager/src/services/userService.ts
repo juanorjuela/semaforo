@@ -1,10 +1,10 @@
 import {
-  collection,
   doc,
   getDoc,
   getDocs,
   updateDoc,
-  setDoc,
+  runTransaction,
+  collection,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { AppUser, UserRole } from '../types';
@@ -22,19 +22,31 @@ export async function getOrCreateUser(
     return { uid, ...userSnap.data() } as AppUser;
   }
 
-  const allUsers = await getDocs(collection(db, 'users'));
-  const role: UserRole = allUsers.empty ? 'super-admin' : 'day-manager';
+  const bootstrapRef = doc(db, 'meta', 'bootstrap');
+  let role: UserRole = 'day-manager';
 
-  const newUser: Omit<AppUser, 'uid'> = {
-    email,
-    displayName,
-    role,
-    createdAt: Date.now(),
-  };
+  await runTransaction(db, async (transaction) => {
+    const bootstrapSnap = await transaction.get(bootstrapRef);
+    const isFirstUser = !bootstrapSnap.exists();
+    role = isFirstUser ? 'super-admin' : 'day-manager';
 
-  await setDoc(userRef, newUser);
+    if (isFirstUser) {
+      transaction.set(bootstrapRef, {
+        initialized: true,
+        createdAt: Date.now(),
+      });
+    }
+
+    transaction.set(userRef, {
+      email,
+      displayName,
+      role,
+      createdAt: Date.now(),
+    });
+  });
+
   await logAudit('CREATE', 'user', uid, uid, email, `Usuario registrado como ${role}`);
-  return { uid, ...newUser };
+  return { uid, email, displayName, role, createdAt: Date.now() };
 }
 
 export async function getAllUsers(): Promise<AppUser[]> {

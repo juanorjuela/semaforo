@@ -14,6 +14,20 @@ import { Event, EventDay, EventStatus } from '../types';
 import { getDateRange } from '../utils/time';
 import { logAudit } from './auditService';
 
+async function deactivateOtherActiveEvents(exceptId?: string): Promise<void> {
+  const activeEvents = await getDocs(
+    query(collection(db, 'events'), where('status', '==', 'active'))
+  );
+  for (const activeDoc of activeEvents.docs) {
+    if (activeDoc.id !== exceptId) {
+      await updateDoc(doc(db, 'events', activeDoc.id), {
+        status: 'completed',
+        updatedAt: Date.now(),
+      });
+    }
+  }
+}
+
 export async function getEvents(): Promise<Event[]> {
   const q = query(collection(db, 'events'), orderBy('startDate', 'desc'));
   const snapshot = await getDocs(q);
@@ -38,6 +52,11 @@ export async function createEvent(
   userEmail: string
 ): Promise<string> {
   const now = Date.now();
+
+  if (data.status === 'active') {
+    await deactivateOtherActiveEvents();
+  }
+
   const docRef = await addDoc(collection(db, 'events'), {
     ...data,
     createdAt: now,
@@ -74,17 +93,7 @@ export async function setEventStatus(
   userEmail: string
 ): Promise<void> {
   if (status === 'active') {
-    const activeEvents = await getDocs(
-      query(collection(db, 'events'), where('status', '==', 'active'))
-    );
-    for (const activeDoc of activeEvents.docs) {
-      if (activeDoc.id !== id) {
-        await updateDoc(doc(db, 'events', activeDoc.id), {
-          status: 'completed',
-          updatedAt: Date.now(),
-        });
-      }
-    }
+    await deactivateOtherActiveEvents(id);
   }
   await updateDoc(doc(db, 'events', id), { status, updatedAt: Date.now() });
   await logAudit('UPDATE', 'event', id, userId, userEmail, `Estado del evento: ${status}`);

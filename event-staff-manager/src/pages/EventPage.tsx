@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Event, EventDay, StaffMember } from '../types';
 import {
@@ -29,6 +29,7 @@ import {
 import { formatDateEs, formatDateLongEs, isValidTimeRange } from '../utils/time';
 import { formatCop } from '../utils/currency';
 import { exportDayPayrollCsv } from '../utils/csv';
+import { createRequestGuard } from '../utils/async';
 import { PlusIcon, TrashIcon, CheckCircleIcon, EyeIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 
 export default function EventPage() {
@@ -66,26 +67,30 @@ export default function EventPage() {
   const isViewingHistory = displayEvent && activeEvent && displayEvent.id !== activeEvent.id;
   const pastEvents = events.filter((e) => e.status === 'completed' || (e.status === 'draft' && e.id !== activeEvent?.id));
 
+  const loadGuard = useRef(createRequestGuard());
+
   const loadDayData = useCallback(async (eventId: string, dayId: string) => {
+    const requestId = loadGuard.current.next();
     const [dayAssignments, activeStaff] = await Promise.all([
       getAssignmentsWithStaffForDay(dayId),
       getActiveStaff(),
     ]);
+    if (!loadGuard.current.isCurrent(requestId)) return;
     setAssignments(dayAssignments);
     setStaff(activeStaff);
   }, []);
 
   const loadEventView = useCallback(async (event: Event) => {
+    const requestId = loadGuard.current.next();
     const eventDays = await getEventDays(event.id);
+    if (!loadGuard.current.isCurrent(requestId)) return;
     setDisplayEvent(event);
     setDays(eventDays);
     setSelectedDayIndex(0);
-    if (eventDays.length > 0) {
-      await loadDayData(event.id, eventDays[0].id);
-    } else {
+    if (eventDays.length === 0) {
       setAssignments([]);
     }
-  }, [loadDayData]);
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -121,7 +126,7 @@ export default function EventPage() {
     e.preventDefault();
     if (!firebaseUser || !appUser) return;
     try {
-      const id = await createEvent(
+      await createEvent(
         { ...eventForm, status: 'active' },
         firebaseUser.uid,
         appUser.email
@@ -164,6 +169,12 @@ export default function EventPage() {
 
   const handleBackToActive = async () => {
     if (activeEvent) await loadEventView(activeEvent);
+  };
+
+  const handleBackToList = () => {
+    setDisplayEvent(null);
+    setDays([]);
+    setAssignments([]);
   };
 
   const handleCompleteEvent = async () => {
@@ -286,8 +297,11 @@ export default function EventPage() {
   const handleMarkAllPaid = async () => {
     if (!firebaseUser || !appUser || !selectedDay || !displayEvent || isReadOnly) return;
     try {
-      await markAllDayPaid(selectedDay.id, firebaseUser.uid, appUser.email);
-      setAlert({ type: 'success', message: 'Todos los pagos del día marcados.' });
+      const count = await markAllDayPaid(selectedDay.id, firebaseUser.uid, appUser.email);
+      setAlert({
+        type: 'success',
+        message: count > 0 ? `${count} pagos marcados.` : 'No hay pagos pendientes.',
+      });
       loadDayData(displayEvent.id, selectedDay.id);
     } catch {
       setAlert({ type: 'error', message: 'Error al marcar pagos.' });
@@ -398,6 +412,13 @@ export default function EventPage() {
             <button onClick={handleBackToActive} className="btn-ghost btn-sm mb-3 -ml-1">
               <ArrowLeftIcon className="w-4 h-4" />
               Volver a {activeEvent.name}
+            </button>
+          )}
+
+          {displayEvent && !activeEvent && (
+            <button onClick={handleBackToList} className="btn-ghost btn-sm mb-3 -ml-1">
+              <ArrowLeftIcon className="w-4 h-4" />
+              Volver al listado
             </button>
           )}
 

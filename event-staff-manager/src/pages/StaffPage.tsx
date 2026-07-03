@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { StaffMember } from '../types';
 import {
@@ -34,7 +34,7 @@ export default function StaffPage() {
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [search, setSearch] = useState('');
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const data = showArchived ? await getAllStaff() : await getActiveStaff();
@@ -44,11 +44,11 @@ export default function StaffPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showArchived]);
 
   useEffect(() => {
     load();
-  }, [showArchived]);
+  }, [load]);
 
   const openCreate = () => {
     setEditing(null);

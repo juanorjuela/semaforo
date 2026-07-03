@@ -8,6 +8,7 @@ import {
   deleteField,
   query,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { AssignmentWithStaff, PaymentStatus, ShiftAssignment } from '../types';
@@ -167,11 +168,31 @@ export async function markAllDayPaid(
   eventDayId: string,
   userId: string,
   userEmail: string
-): Promise<void> {
+): Promise<number> {
   const assignments = await getAssignmentsForDay(eventDayId);
-  for (const a of assignments) {
-    if (a.paymentStatus === 'pending') {
-      await markAssignmentPaid(a.id, userId, userEmail);
-    }
+  const pending = assignments.filter((a) => a.paymentStatus === 'pending');
+  if (pending.length === 0) return 0;
+
+  const batch = writeBatch(db);
+  const now = Date.now();
+
+  for (const a of pending) {
+    batch.update(doc(db, 'assignments', a.id), {
+      paymentStatus: 'paid',
+      paidAt: now,
+      paidBy: userId,
+      updatedAt: now,
+    });
   }
+
+  await batch.commit();
+  await logAudit(
+    'PAY',
+    'assignment',
+    eventDayId,
+    userId,
+    userEmail,
+    `${pending.length} pagos marcados como realizados`
+  );
+  return pending.length;
 }
