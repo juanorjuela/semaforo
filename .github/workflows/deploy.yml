@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - ecoguardianas-standalone
   workflow_dispatch:
 
 jobs:
