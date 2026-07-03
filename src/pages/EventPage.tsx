@@ -50,6 +50,8 @@ export default function EventPage() {
   const [createEventError, setCreateEventError] = useState<string | null>(null);
   const [creatingEvent, setCreatingEvent] = useState(false);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assignError, setAssignError] = useState<string | null>(null);
+  const [assigning, setAssigning] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<string | null>(null);
 
   const [eventForm, setEventForm] = useState({
@@ -232,6 +234,7 @@ export default function EventPage() {
 
   const openAssign = (assignmentId?: string) => {
     if (isReadOnly) return;
+    setAssignError(null);
     if (assignmentId) {
       const a = assignments.find((x) => x.id === assignmentId);
       if (a) {
@@ -251,18 +254,28 @@ export default function EventPage() {
 
   const handleAssign = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firebaseUser || !appUser || !displayEvent || !selectedDay || isReadOnly) return;
+    setAssignError(null);
+
+    if (!firebaseUser || !appUser || !displayEvent || !selectedDay || isReadOnly) {
+      setAssignError('No se puede asignar en este momento. Recarga la página.');
+      return;
+    }
 
     const member = staff.find((s) => s.id === assignForm.staffMemberId);
+    if (!editingAssignment && !assignForm.staffMemberId) {
+      setAssignError('Selecciona un miembro del personal.');
+      return;
+    }
     if (!member?.defaultHourlyWage) {
-      setAlert({ type: 'error', message: 'El personal debe tener tarifa por hora configurada.' });
+      setAssignError('El personal debe tener tarifa por hora configurada.');
       return;
     }
     if (!isValidTimeRange(assignForm.startTime, assignForm.endTime)) {
-      setAlert({ type: 'error', message: 'Rango de horario inválido.' });
+      setAssignError('Rango de horario inválido.');
       return;
     }
 
+    setAssigning(true);
     try {
       if (editingAssignment) {
         await updateAssignment(
@@ -288,12 +301,16 @@ export default function EventPage() {
         setAlert({ type: 'success', message: 'Personal asignado.' });
       }
       setAssignModalOpen(false);
+      setAssignError(null);
       loadDayData(displayEvent.id, selectedDay.id);
     } catch (err) {
-      setAlert({
-        type: 'error',
-        message: err instanceof Error ? err.message : 'Error al asignar.',
-      });
+      setAssignError(
+        err instanceof Error
+          ? err.message
+          : getFirebaseErrorMessage(err, 'Error al asignar. Intenta de nuevo.')
+      );
+    } finally {
+      setAssigning(false);
     }
   };
 
@@ -660,10 +677,20 @@ export default function EventPage() {
 
       <Modal
         open={assignModalOpen}
-        onClose={() => setAssignModalOpen(false)}
+        onClose={() => {
+          if (!assigning) {
+            setAssignModalOpen(false);
+            setAssignError(null);
+          }
+        }}
         title={editingAssignment ? 'Editar turno' : 'Asignar personal'}
       >
         <form onSubmit={handleAssign} className="space-y-4">
+          {assignError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              {assignError}
+            </div>
+          )}
           {!editingAssignment && (
             <div>
               <label className="label">Personal</label>
@@ -705,8 +732,8 @@ export default function EventPage() {
               />
             </div>
           </div>
-          <button type="submit" className="btn-primary w-full">
-            {editingAssignment ? 'Guardar turno' : 'Asignar'}
+          <button type="submit" className="btn-primary w-full" disabled={assigning}>
+            {assigning ? 'Guardando...' : editingAssignment ? 'Guardar turno' : 'Asignar'}
           </button>
         </form>
       </Modal>

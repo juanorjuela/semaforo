@@ -10,6 +10,7 @@ import {
 } from '../services/staffService';
 import { PageHeader, EmptyState, LoadingSpinner, Alert, Modal } from '../components/ui';
 import { formatCop, parseCopInput } from '../utils/currency';
+import { getFirebaseErrorMessage } from '../utils/errors';
 import { PlusIcon, PencilIcon, ArchiveBoxIcon } from '@heroicons/react/24/outline';
 
 const emptyForm = {
@@ -29,6 +30,8 @@ export default function StaffPage() {
   const [showArchived, setShowArchived] = useState(false);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<StaffMember | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -53,11 +56,13 @@ export default function StaffPage() {
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm);
+    setModalError(null);
     setModalOpen(true);
   };
 
   const openEdit = (member: StaffMember) => {
     setEditing(member);
+    setModalError(null);
     setForm({
       name: member.name,
       phone: member.phone || '',
@@ -73,7 +78,17 @@ export default function StaffPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firebaseUser || !appUser) return;
+    setModalError(null);
+
+    if (!firebaseUser || !appUser) {
+      setModalError('Sesión no válida. Cierra sesión e inicia de nuevo.');
+      return;
+    }
+
+    if (!form.name.trim()) {
+      setModalError('El nombre es obligatorio.');
+      return;
+    }
 
     const wage = parseCopInput(form.defaultHourlyWage);
     const payload = {
@@ -87,6 +102,7 @@ export default function StaffPage() {
       backgroundNotes: form.backgroundNotes.trim() || undefined,
     };
 
+    setSaving(true);
     try {
       if (editing) {
         await updateStaff(editing.id, payload, firebaseUser.uid, appUser.email);
@@ -96,9 +112,13 @@ export default function StaffPage() {
         setAlert({ type: 'success', message: 'Personal agregado.' });
       }
       setModalOpen(false);
+      setModalError(null);
       load();
-    } catch {
-      setAlert({ type: 'error', message: 'Error al guardar.' });
+    } catch (err) {
+      console.error('Error saving staff:', err);
+      setModalError(getFirebaseErrorMessage(err, 'Error al guardar. Intenta de nuevo.'));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -195,10 +215,20 @@ export default function StaffPage() {
 
       <Modal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => {
+          if (!saving) {
+            setModalOpen(false);
+            setModalError(null);
+          }
+        }}
         title={editing ? 'Editar personal' : 'Nuevo personal'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
+          {modalError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              {modalError}
+            </div>
+          )}
           <div>
             <label className="label">Nombre *</label>
             <input
@@ -272,8 +302,12 @@ export default function StaffPage() {
               onChange={(e) => setForm({ ...form, backgroundNotes: e.target.value })}
             />
           </div>
-          <button type="submit" className="btn-primary w-full">
-            {editing ? 'Guardar cambios' : 'Agregar personal'}
+          <button type="submit" className="btn-primary w-full" disabled={saving}>
+            {saving
+              ? 'Guardando...'
+              : editing
+              ? 'Guardar cambios'
+              : 'Agregar personal'}
           </button>
         </form>
       </Modal>
