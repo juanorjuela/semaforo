@@ -58,3 +58,16 @@ O automático vía GitHub Actions (secret `FIREBASE_SERVICE_ACCOUNT_ECOGUARDIANA
 ## Licencia
 
 MIT
+
+## Migrar a este repositorio
+
+Si vienes del repo `semaforo`, el código standalone está en la rama `ecoguardianas-standalone`:
+
+```bash
+git clone https://github.com/juanorjuela/ecoguardianas.git
+cd ecoguardianas
+git remote add semaforo https://github.com/juanorjuela/semaforo.git
+git fetch semaforo ecoguardianas-standalone
+git reset --hard semaforo/ecoguardianas-standalone
+git push origin main --force
+```
