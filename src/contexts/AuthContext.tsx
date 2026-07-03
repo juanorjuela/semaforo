@@ -3,11 +3,14 @@ import {
   User,
   onAuthStateChanged,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut as firebaseSignOut,
 } from 'firebase/auth';
 import { auth, googleProvider } from '../config/firebase';
 import { AppUser } from '../types';
 import { getOrCreateUser } from '../services/userService';
+import { isMobileDevice } from '../utils/device';
 
 interface AuthContextType {
   firebaseUser: User | null;
@@ -47,23 +50,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!auth) return;
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setLoading(true);
-      setFirebaseUser(user);
-      if (user) {
-        await loadProfile(user);
-      } else {
-        setAppUser(null);
-        setProfileError(null);
+    let unsubscribe: (() => void) | undefined;
+
+    const init = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          setFirebaseUser(result.user);
+          await loadProfile(result.user);
+        }
+      } catch (err) {
+        console.error('Error en redirect de Google:', err);
+        setProfileError(
+          'Error al completar el inicio de sesión. Usa Safari o Chrome sin modo privado e intenta de nuevo.'
+        );
       }
-      setLoading(false);
-    });
-    return unsubscribe;
+
+      unsubscribe = onAuthStateChanged(auth, async (user) => {
+        setFirebaseUser(user);
+        if (user) {
+          await loadProfile(user);
+        } else {
+          setAppUser(null);
+          setProfileError(null);
+        }
+        setLoading(false);
+      });
+    };
+
+    init();
+
+    return () => unsubscribe?.();
   }, [loadProfile]);
 
   const signInWithGoogle = async () => {
     if (!auth) throw new Error('Firebase no configurado');
-    await signInWithPopup(auth, googleProvider);
+    setProfileError(null);
+
+    if (isMobileDevice()) {
+      await signInWithRedirect(auth, googleProvider);
+    } else {
+      await signInWithPopup(auth, googleProvider);
+    }
   };
 
   const signOut = async () => {

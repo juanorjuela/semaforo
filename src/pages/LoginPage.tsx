@@ -57,7 +57,9 @@ export default function LoginPage() {
         </button>
 
         <p className="text-xs text-gray-400 mt-6">
-          Acceso solo para administradores autorizados
+          Acceso solo para administradores autorizados.
+          <br />
+          En iPhone: usa Safari o Chrome, sin modo privado.
         </p>
       </div>
     </div>
