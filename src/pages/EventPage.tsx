@@ -30,6 +30,7 @@ import { formatDateEs, formatDateLongEs, isValidTimeRange } from '../utils/time'
 import { formatCop } from '../utils/currency';
 import { exportDayPayrollCsv } from '../utils/csv';
 import { createRequestGuard } from '../utils/async';
+import { getFirebaseErrorMessage } from '../utils/errors';
 import { PlusIcon, TrashIcon, CheckCircleIcon, EyeIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 
 export default function EventPage() {
@@ -46,6 +47,8 @@ export default function EventPage() {
   const [showHistory, setShowHistory] = useState(false);
 
   const [createEventOpen, setCreateEventOpen] = useState(false);
+  const [createEventError, setCreateEventError] = useState<string | null>(null);
+  const [creatingEvent, setCreatingEvent] = useState(false);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<string | null>(null);
 
@@ -124,23 +127,49 @@ export default function EventPage() {
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firebaseUser || !appUser) return;
+    setCreateEventError(null);
+
+    if (!firebaseUser || !appUser) {
+      setCreateEventError('Sesión no válida. Cierra sesión e inicia de nuevo.');
+      return;
+    }
+
+    if (!eventForm.name.trim() || !eventForm.venueName.trim()) {
+      setCreateEventError('Completa el nombre y el lugar del evento.');
+      return;
+    }
+
+    if (!eventForm.startDate || !eventForm.endDate) {
+      setCreateEventError('Selecciona las fechas de inicio y fin.');
+      return;
+    }
+
+    if (eventForm.endDate < eventForm.startDate) {
+      setCreateEventError('La fecha fin debe ser igual o posterior a la fecha inicio.');
+      return;
+    }
+
+    setCreatingEvent(true);
     try {
       await createEvent(
-        { ...eventForm, status: 'active' },
+        { ...eventForm, name: eventForm.name.trim(), venueName: eventForm.venueName.trim(), status: 'active' },
         firebaseUser.uid,
         appUser.email
       );
       setCreateEventOpen(false);
       setEventForm({ name: '', venueName: '', startDate: '', endDate: '' });
+      setCreateEventError(null);
       setAlert({ type: 'success', message: 'Evento creado y activado.' });
       const active = await getActiveEvent();
       setActiveEvent(active);
       const allEvents = await getEvents();
       setEvents(allEvents);
       if (active) await loadEventView(active);
-    } catch {
-      setAlert({ type: 'error', message: 'Error al crear el evento.' });
+    } catch (err) {
+      console.error('Error creating event:', err);
+      setCreateEventError(getFirebaseErrorMessage(err, 'Error al crear el evento. Intenta de nuevo.'));
+    } finally {
+      setCreatingEvent(false);
     }
   };
 
@@ -337,7 +366,7 @@ export default function EventPage() {
             title="Eventos"
             subtitle="Crea o activa un evento para comenzar"
             action={
-              <button onClick={() => setCreateEventOpen(true)} className="btn-primary">
+              <button onClick={() => { setCreateEventError(null); setCreateEventOpen(true); }} className="btn-primary">
                 <PlusIcon className="w-4 h-4" />
                 Nuevo evento
               </button>
@@ -347,7 +376,7 @@ export default function EventPage() {
             <EmptyState
               message="No hay eventos. Crea tu primer festival o evento."
               action={
-                <button onClick={() => setCreateEventOpen(true)} className="btn-primary">
+                <button onClick={() => { setCreateEventError(null); setCreateEventOpen(true); }} className="btn-primary">
                   Crear evento
                 </button>
               }
@@ -566,8 +595,22 @@ export default function EventPage() {
         </>
       )}
 
-      <Modal open={createEventOpen} onClose={() => setCreateEventOpen(false)} title="Nuevo evento">
+      <Modal
+        open={createEventOpen}
+        onClose={() => {
+          if (!creatingEvent) {
+            setCreateEventOpen(false);
+            setCreateEventError(null);
+          }
+        }}
+        title="Nuevo evento"
+      >
         <form onSubmit={handleCreateEvent} className="space-y-4">
+          {createEventError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              {createEventError}
+            </div>
+          )}
           <div>
             <label className="label">Nombre del evento</label>
             <input
@@ -609,8 +652,8 @@ export default function EventPage() {
               />
             </div>
           </div>
-          <button type="submit" className="btn-primary w-full">
-            Crear y activar evento
+          <button type="submit" className="btn-primary w-full" disabled={creatingEvent}>
+            {creatingEvent ? 'Creando evento...' : 'Crear y activar evento'}
           </button>
         </form>
       </Modal>
