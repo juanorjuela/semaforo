@@ -40,7 +40,11 @@ export async function createStaff(
     createdAt: now,
     updatedAt: now,
   });
-  await logAudit('CREATE', 'staff', docRef.id, userId, userEmail, `Personal creado: ${data.name}`);
+  try {
+    await logAudit('CREATE', 'staff', docRef.id, userId, userEmail, `Personal creado: ${data.name}`);
+  } catch (err) {
+    console.warn('Audit log failed after staff create:', err);
+  }
   return docRef.id;
 }
 

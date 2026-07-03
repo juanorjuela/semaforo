@@ -621,8 +621,25 @@ export default function EventPage() {
           }
         }}
         title="Nuevo evento"
+        footer={
+          <div className="space-y-2">
+            {createEventError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                {createEventError}
+              </div>
+            )}
+            <button
+              type="submit"
+              form="create-event-form"
+              className="btn-primary w-full min-h-[48px]"
+              disabled={creatingEvent}
+            >
+              {creatingEvent ? 'Creando evento...' : 'Crear y activar evento'}
+            </button>
+          </div>
+        }
       >
-        <form onSubmit={handleCreateEvent} noValidate className="space-y-4">
+        <form id="create-event-form" onSubmit={handleCreateEvent} noValidate className="space-y-4">
           {createEventError && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
               {createEventError}
@@ -669,11 +686,6 @@ export default function EventPage() {
               />
             </div>
           </div>
-          <div className="sticky bottom-0 bg-white pt-3 pb-1 border-t border-gray-100 -mx-1 px-1">
-            <button type="submit" className="btn-primary w-full" disabled={creatingEvent}>
-              {creatingEvent ? 'Creando evento...' : 'Crear y activar evento'}
-            </button>
-          </div>
         </form>
       </Modal>
 
@@ -686,8 +698,25 @@ export default function EventPage() {
           }
         }}
         title={editingAssignment ? 'Editar turno' : 'Asignar personal'}
+        footer={
+          <div className="space-y-2">
+            {assignError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                {assignError}
+              </div>
+            )}
+            <button
+              type="submit"
+              form="assign-form"
+              className="btn-primary w-full min-h-[48px]"
+              disabled={assigning}
+            >
+              {assigning ? 'Guardando...' : editingAssignment ? 'Guardar turno' : 'Asignar'}
+            </button>
+          </div>
+        }
       >
-        <form onSubmit={handleAssign} noValidate className="space-y-4">
+        <form id="assign-form" onSubmit={handleAssign} noValidate className="space-y-4">
           {assignError && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
               {assignError}
@@ -733,11 +762,6 @@ export default function EventPage() {
                 required
               />
             </div>
-          </div>
-          <div className="sticky bottom-0 bg-white pt-3 pb-1 border-t border-gray-100 -mx-1 px-1">
-            <button type="submit" className="btn-primary w-full" disabled={assigning}>
-              {assigning ? 'Guardando...' : editingAssignment ? 'Guardar turno' : 'Asignar'}
-            </button>
           </div>
         </form>
       </Modal>
