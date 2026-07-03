@@ -11,6 +11,7 @@ import {
 import { db } from '../config/firebase';
 import { StaffMember } from '../types';
 import { logAudit } from './auditService';
+import { toFirestoreData } from '../utils/firestore';
 
 export async function getActiveStaff(): Promise<StaffMember[]> {
   const q = query(
@@ -34,12 +35,15 @@ export async function createStaff(
   userEmail: string
 ): Promise<string> {
   const now = Date.now();
-  const docRef = await addDoc(collection(db, 'staff'), {
-    ...data,
-    archived: false,
-    createdAt: now,
-    updatedAt: now,
-  });
+  const docRef = await addDoc(
+    collection(db, 'staff'),
+    toFirestoreData({
+      ...data,
+      archived: false,
+      createdAt: now,
+      updatedAt: now,
+    })
+  );
   try {
     await logAudit('CREATE', 'staff', docRef.id, userId, userEmail, `Personal creado: ${data.name}`);
   } catch (err) {
@@ -54,8 +58,15 @@ export async function updateStaff(
   userId: string,
   userEmail: string
 ): Promise<void> {
-  await updateDoc(doc(db, 'staff', id), { ...data, updatedAt: Date.now() });
-  await logAudit('UPDATE', 'staff', id, userId, userEmail, `Personal actualizado: ${data.name || id}`);
+  await updateDoc(
+    doc(db, 'staff', id),
+    toFirestoreData({ ...data, updatedAt: Date.now() })
+  );
+  try {
+    await logAudit('UPDATE', 'staff', id, userId, userEmail, `Personal actualizado: ${data.name || id}`);
+  } catch (err) {
+    console.warn('Audit log failed after staff update:', err);
+  }
 }
 
 export async function archiveStaff(
