@@ -20,6 +20,16 @@ Sistema de administración de personal para festivales, conciertos y eventos. Pe
 - Proyecto Firebase con Firestore y Authentication (Google)
 - Cuenta de Firebase CLI (`npm install -g firebase-tools`)
 
+## Firebase compartido
+
+Este app usa el **mismo proyecto Firebase** que Semáforos de Igualdad (`semaforo-de-igualdad`).
+
+- El juego usa la colección `cards`
+- Este app usa colecciones separadas: `staff`, `events`, `assignments`, etc.
+- Las reglas de Firestore protegen el staff app sin afectar `cards`
+
+Copia las credenciales del juego a `.env` (o usa el `.env` ya generado con las mismas credenciales de `src/config/firebase.ts`).
+
 ## Configuración local
 
 ```bash

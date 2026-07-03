@@ -58,5 +58,10 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow create: if isAdmin();
     }
+
+    // Semáforos de Igualdad (card game) — keep existing public access
+    match /cards/{docId} {
+      allow read, write: if true;
+    }
   }
 }
